@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+:root { /* Thème 1: Hospital (Logo Loum) */
+  --color-primary: #0056b3;   /* Bleu Logo */
+  --color-secondary: #28a745; /* Vert Logo */
+  --color-accent: #f4f7fe;    /* Fond clair */
+}
+
+[data-theme='dark'] { /* Thème 2: Mode Nuit (Élégant) */
+  --color-primary: #1e293b;
+  --color-secondary: #38bdf8;
+  --color-accent: #0f172a;
+}
+
+[data-theme='iuc'] { /* Thème 3: Académique (Rouge/Gris) */
+  --color-primary: #b91c1c;
+  --color-secondary: #4b5563;
+  --color-accent: #f9fafb;
+}
+
+body { background-color: var(--color-accent); transition: all 0.3s ease; }
