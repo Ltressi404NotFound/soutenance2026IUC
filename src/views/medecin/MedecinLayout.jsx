@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Users, ClipboardList, Settings, 
-  LogOut, BellRing, ShieldAlert, HeartPulse 
+  LogOut, ShieldAlert, HeartPulse, X, Bell 
 } from 'lucide-react';
 import { auth, db } from '../../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
+import { signOut } from 'firebase/auth'; // Importation propre de signOut
 
 // Importations des sous-vues
 import MedecinDashboard from "./MedecinDashboard";
@@ -18,8 +19,10 @@ const MedecinLayout = () => {
   const location = useLocation();
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // NOUVEAU : État pour afficher/masquer la modale de déconnexion
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // 1. Vérification du statut de l'utilisateur
   useEffect(() => {
     const checkUserStatus = async () => {
       if (auth.currentUser) {
@@ -37,16 +40,11 @@ const MedecinLayout = () => {
     checkUserStatus();
   }, [location.pathname]);
 
-  // 2. Logique de déconnexion sécurisée
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      // Redirection vers la page de login et nettoyage de l'historique
-      navigate('/login', { replace: true });
-    } catch (error) {
-      console.error("Erreur lors de la déconnexion:", error);
-    }
-  };
+  // LOGIQUE DE DÉCONNEXION (Identique à ton code Admin)
+  const handleLogout = () => signOut(auth).then(() => {
+    setShowLogoutConfirm(false);
+    navigate('/login', { replace: true });
+  });
 
   const menuItems = [
     { path: '/medecin', icon: LayoutDashboard, label: 'Tableau de bord' },
@@ -65,13 +63,12 @@ const MedecinLayout = () => {
   );
 
   return (
-    <div className="flex h-screen bg-[#f1f5f9] font-sans antialiased text-slate-900">
+    <div className="flex h-screen bg-[#f1f5f9] font-sans antialiased text-slate-900 overflow-hidden">
       
-      {/* SIDEBAR - Masquée si le changement de mot de passe est requis */}
+      {/* SIDEBAR */}
       {!mustChangePassword && (
         <aside className="w-80 bg-white m-4 rounded-[2.5rem] shadow-xl shadow-slate-200/50 flex flex-col border border-white overflow-hidden animate-in slide-in-from-left duration-500">
           
-          {/* LOGO SECTION */}
           <div className="p-8 mb-4">
             <div className="flex items-center gap-3">
               <div className="bg-gradient-to-br from-[#28a745] to-[#208a38] p-3 rounded-2xl shadow-lg shadow-green-200 ring-4 ring-green-50">
@@ -84,7 +81,6 @@ const MedecinLayout = () => {
             </div>
           </div>
 
-          {/* NAV LINKS */}
           <nav className="flex-1 px-6 space-y-3">
             <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest ml-4 mb-4">Menu Principal</p>
             {menuItems.map((item) => {
@@ -107,15 +103,15 @@ const MedecinLayout = () => {
             })}
           </nav>
 
-          {/* USER & LOGOUT */}
+          {/* SECTION DÉCONNEXION */}
           <div className="p-6 mt-auto">
             <div className="bg-slate-50 p-4 rounded-3xl mb-4 border border-slate-100">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">Médecin Connecté</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter mb-1">Session</p>
                 <p className="text-sm font-bold text-slate-700 truncate">{auth.currentUser?.email}</p>
             </div>
             <button 
-              onClick={handleLogout} 
-              className="w-full flex items-center justify-center gap-3 py-4 rounded-[1.5rem] bg-rose-50 text-rose-600 font-black uppercase text-xs tracking-widest hover:bg-rose-100 hover:shadow-lg hover:shadow-rose-100 transition-all active:scale-95"
+              onClick={() => setShowLogoutConfirm(true)} // Déclenche la modale
+              className="w-full flex items-center justify-center gap-3 py-4 rounded-[1.5rem] bg-rose-50 text-rose-600 font-black uppercase text-xs tracking-widest hover:bg-rose-100 transition-all active:scale-95"
             >
               <LogOut size={18} /> Déconnexion
             </button>
@@ -133,25 +129,14 @@ const MedecinLayout = () => {
                     <div className="w-24 h-24 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto ring-8 ring-orange-50">
                       <ShieldAlert size={48} />
                     </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full border-4 border-white animate-bounce" />
                 </div>
-                
                 <div className="space-y-2">
                   <h2 className="text-4xl font-black text-slate-800 tracking-tighter">Sécurité Requise</h2>
-                  <p className="text-slate-500 font-medium px-4">
-                    Pour accéder au dossier médical des patients, vous devez personnaliser votre mot de passe temporaire.
-                  </p>
+                  <p className="text-slate-500 font-medium px-4">Changez votre mot de passe pour continuer.</p>
                 </div>
-                
-                <div className="pt-8 border-t border-slate-50 text-left">
-                  <MedecinSettings />
-                </div>
-                
-                <button 
-                  onClick={handleLogout} 
-                  className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors"
-                >
-                  Quitter la session en toute sécurité
+                <MedecinSettings />
+                <button onClick={() => setShowLogoutConfirm(true)} className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors">
+                  Quitter la session
                 </button>
               </div>
             </div>
@@ -168,6 +153,33 @@ const MedecinLayout = () => {
           )}
         </div>
       </main>
+
+      {/* MODAL DE CONFIRMATION (Inspiré de ton code Admin) */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[110] animate-in fade-in duration-300">
+           <div className="bg-white p-10 rounded-[3rem] shadow-2xl max-w-sm w-full text-center border border-white animate-in zoom-in-95 duration-300">
+              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <LogOut size={32} />
+              </div>
+              <h3 className="text-2xl font-black text-slate-800 tracking-tight">Fin de session ?</h3>
+              <p className="text-slate-500 font-medium mt-2 mb-8">Voulez-vous fermer l'accès au dossier médical ?</p>
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={handleLogout} 
+                  className="w-full py-4 rounded-2xl bg-rose-500 font-black text-white uppercase tracking-widest text-xs hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20"
+                >
+                  Confirmer la déconnexion
+                </button>
+                <button 
+                  onClick={() => setShowLogoutConfirm(false)} 
+                  className="w-full py-4 rounded-2xl bg-slate-100 font-black text-slate-500 uppercase tracking-widest text-xs hover:bg-slate-200 transition-all"
+                >
+                  Annuler
+                </button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 };
