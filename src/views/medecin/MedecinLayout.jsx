@@ -19,6 +19,7 @@ const MedecinLayout = () => {
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // 1. Vérification du statut de l'utilisateur
   useEffect(() => {
     const checkUserStatus = async () => {
       if (auth.currentUser) {
@@ -35,6 +36,17 @@ const MedecinLayout = () => {
     };
     checkUserStatus();
   }, [location.pathname]);
+
+  // 2. Logique de déconnexion sécurisée
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      // Redirection vers la page de login et nettoyage de l'historique
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+    }
+  };
 
   const menuItems = [
     { path: '/medecin', icon: LayoutDashboard, label: 'Tableau de bord' },
@@ -55,6 +67,7 @@ const MedecinLayout = () => {
   return (
     <div className="flex h-screen bg-[#f1f5f9] font-sans antialiased text-slate-900">
       
+      {/* SIDEBAR - Masquée si le changement de mot de passe est requis */}
       {!mustChangePassword && (
         <aside className="w-80 bg-white m-4 rounded-[2.5rem] shadow-xl shadow-slate-200/50 flex flex-col border border-white overflow-hidden animate-in slide-in-from-left duration-500">
           
@@ -101,7 +114,7 @@ const MedecinLayout = () => {
                 <p className="text-sm font-bold text-slate-700 truncate">{auth.currentUser?.email}</p>
             </div>
             <button 
-              onClick={() => auth.signOut()} 
+              onClick={handleLogout} 
               className="w-full flex items-center justify-center gap-3 py-4 rounded-[1.5rem] bg-rose-50 text-rose-600 font-black uppercase text-xs tracking-widest hover:bg-rose-100 hover:shadow-lg hover:shadow-rose-100 transition-all active:scale-95"
             >
               <LogOut size={18} /> Déconnexion
@@ -134,7 +147,10 @@ const MedecinLayout = () => {
                   <MedecinSettings />
                 </div>
                 
-                <button onClick={() => auth.signOut()} className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors">
+                <button 
+                  onClick={handleLogout} 
+                  className="text-xs font-bold text-slate-400 uppercase tracking-widest hover:text-rose-500 transition-colors"
+                >
                   Quitter la session en toute sécurité
                 </button>
               </div>

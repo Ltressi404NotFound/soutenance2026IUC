@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'; // Ajout de useNavigate
 import { 
   LayoutDashboard, 
   UserCheck, 
@@ -22,6 +22,7 @@ import AddPatient from './AddPatient';
 
 const ReceptionLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // Initialisation de navigate
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -42,7 +43,16 @@ const ReceptionLayout = () => {
     checkStatus();
   }, []);
 
-  // Définition du menu de navigation
+  // Logique de déconnexion avec redirection
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error("Erreur déconnexion réception:", error);
+    }
+  };
+
   const menu = [
     { path: '/reception', icon: LayoutDashboard, label: 'Accueil' },
     { path: '/reception/nouveau-patient', icon: UserPlus, label: 'Enregistrement' },
@@ -51,7 +61,6 @@ const ReceptionLayout = () => {
     { path: '/reception/parametres', icon: Settings, label: 'Mon Compte' },
   ];
 
-  // Trouve le label de la page actuelle pour le fil d'ariane
   const currentLabel = menu.find(m => m.path === location.pathname)?.label || "Tableau de bord";
 
   if (loading) {
@@ -69,7 +78,6 @@ const ReceptionLayout = () => {
       {/* BARRE LATÉRALE (SIDEBAR) */}
       {!mustChangePassword && (
         <aside className="w-80 bg-[#004a99] text-white flex flex-col shadow-2xl relative z-10 transition-all duration-500">
-          {/* LOGO SECTION */}
           <div className="p-10 border-b border-white/5">
             <h1 className="text-2xl font-black tracking-tighter italic flex items-center gap-2">
               FirstAid <span className="text-green-400 not-italic">Hôpital</span>
@@ -77,7 +85,6 @@ const ReceptionLayout = () => {
             <p className="text-[10px] text-blue-200/50 font-bold uppercase tracking-[0.2em] mt-1">Espace Réceptionniste</p>
           </div>
 
-          {/* NAVIGATION */}
           <nav className="flex-1 p-6 space-y-3">
             {menu.map((item) => {
               const isActive = location.pathname === item.path;
@@ -101,14 +108,14 @@ const ReceptionLayout = () => {
             })}
           </nav>
 
-          {/* ACTIONS BAS DE PAGE */}
           <div className="p-8 space-y-4">
             <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
               <p className="text-[10px] font-black text-blue-200/50 uppercase mb-2">Session active</p>
               <p className="text-sm font-bold truncate">{auth.currentUser?.email}</p>
             </div>
+            {/* Mise à jour de l'appel onClick */}
             <button 
-              onClick={() => auth.signOut()} 
+              onClick={handleLogout} 
               className="w-full p-4 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group"
             >
               <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> 
@@ -120,8 +127,6 @@ const ReceptionLayout = () => {
 
       {/* CONTENU PRINCIPAL */}
       <main className="flex-1 overflow-y-auto bg-slate-50 relative custom-scrollbar">
-        
-        {/* HEADER DE PAGE DYNAMIQUE */}
         {!mustChangePassword && (
           <header className="px-8 pt-8 flex items-center justify-between sticky top-0 bg-slate-50/80 backdrop-blur-md z-[5] pb-4">
             <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
@@ -141,7 +146,6 @@ const ReceptionLayout = () => {
           </header>
         )}
 
-        {/* ZONE DE RENDU DES PAGES */}
         <div className="p-8">
           {mustChangePassword ? (
             <div className="max-w-xl mx-auto mt-12 bg-white p-12 rounded-[3.5rem] shadow-2xl border border-gray-50 text-center animate-in zoom-in-95 duration-500">
@@ -153,6 +157,13 @@ const ReceptionLayout = () => {
                 Pour protéger les données des patients, vous devez définir un nouveau mot de passe personnel avant d'accéder aux fonctions d'enregistrement.
               </p>
               <MedecinSettings />
+              {/* Optionnel : Ajout d'un bouton de sortie ici aussi pour plus de sécurité */}
+              <button 
+                onClick={handleLogout}
+                className="mt-6 text-xs font-bold text-gray-400 hover:text-red-500 uppercase tracking-widest transition-colors"
+              >
+                Quitter la session
+              </button>
             </div>
           ) : (
             <div className="animate-in fade-in duration-700">
