@@ -8,7 +8,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import LoginPage from './views/auth/LoginPage';
 import AdminLayout from './views/admin/AdminLayout'; 
 import MedecinLayout from './views/medecin/MedecinLayout'; 
-import ReceptionLayout from './views/reception/ReceptionLayout'; // <-- NOUVEAU
+import ReceptionLayout from './views/reception/ReceptionLayout'; 
 
 function App() {
   const [user, setUser] = useState(null);
@@ -23,7 +23,9 @@ function App() {
           const userDoc = await getDoc(doc(db, "utilisateurs", firebaseUser.uid));
           if (userDoc.exists()) {
             setUser(firebaseUser);
-            setRole(userDoc.data().role);
+            // On s'assure de récupérer le champ 'role' ou 'rôle' selon ta base
+            const userData = userDoc.data();
+            setRole(userData.role || userData.rôle); 
           } else {
             console.error("Profil Firestore manquant");
             setUser(null);
@@ -43,27 +45,35 @@ function App() {
     return () => unsubscribe();
   }, []);
 
-  // Fonction utilitaire pour gérer les directions de redirection
+  // Utilitaire de redirection selon le rôle
   const getRedirectPath = (userRole) => {
     switch(userRole) {
       case 'admin': return "/admin";
       case 'medecin': return "/medecin";
-      case 'reception': return "/reception"; // <-- DIRECTION RÉCEPTION
+      case 'reception': return "/reception";
       default: return "/login";
     }
   };
 
+  // Écran de chargement "Professionnel" (sobre, gris et bleu)
   if (loading) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center bg-white">
-        <div className="relative">
-          <div className="w-20 h-20 border-4 border-gray-100 rounded-full"></div>
-          <div className="w-20 h-20 border-4 border-t-[#28a745] border-r-[#0056b3] rounded-full animate-spin absolute top-0"></div>
+      <div className="h-screen flex flex-col items-center justify-center bg-[#f8fafc]">
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative flex items-center justify-center">
+            {/* Spinner sobre */}
+            <div className="w-16 h-16 border-4 border-slate-200 rounded-full"></div>
+            <div className="w-16 h-16 border-4 border-t-blue-600 border-r-transparent rounded-full animate-spin absolute top-0"></div>
+          </div>
+          <div className="text-center">
+            <h2 className="text-2xl font-black text-slate-800 tracking-tighter uppercase">
+              FirstAid <span className="text-blue-600">Loum</span>
+            </h2>
+            <p className="text-slate-400 text-[10px] font-bold mt-2 uppercase tracking-[0.3em] animate-pulse">
+              Initialisation du terminal sécurisé
+            </p>
+          </div>
         </div>
-        <h2 className="mt-6 text-xl font-black text-[#0056b3] tracking-tighter uppercase">
-          FirstAid <span className="text-[#28a745]">Loum</span>
-        </h2>
-        <p className="text-gray-400 text-xs font-bold mt-2 animate-pulse tracking-widest">SÉCURISATION DU PORTAIL...</p>
       </div>
     );
   }
@@ -71,7 +81,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* LOGIN : Redirige vers le bon espace si déjà connecté */}
+        {/* LOGIN : Redirige automatiquement si déjà authentifié */}
         <Route 
           path="/login" 
           element={!user ? <LoginPage /> : <Navigate to={getRedirectPath(role)} replace />} 
@@ -95,7 +105,7 @@ function App() {
           element={user && role === 'reception' ? <ReceptionLayout /> : <Navigate to="/login" replace />} 
         />
 
-        {/* PROTECTION GLOBALE */}
+        {/* ROUTE PAR DÉFAUT : Sécurité & Redirection dynamique */}
         <Route 
           path="*" 
           element={<Navigate to={user ? getRedirectPath(role) : "/login"} replace />} 

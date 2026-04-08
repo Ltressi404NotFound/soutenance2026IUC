@@ -1,30 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'; // Ajout de useNavigate
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  UserCheck, 
-  MessageSquare, 
-  Settings, 
-  LogOut, 
-  UserPlus, 
-  ChevronRight,
-  Bell
+  LayoutDashboard, UserCheck, MessageSquare, 
+  Settings, LogOut, UserPlus, ChevronRight,
+  Bell, CalendarClock, AlertCircle, X 
 } from 'lucide-react';
 import { auth, db } from '../../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
 
-// Import de tes composants
+// Tes composants
 import MedecinSettings from '../medecin/MedecinSettings';
 import ReceptionDashboard from './ReceptionDashboard';
 import PatientCheck from './PatientCheck';
 import MedicalChat from './MedicalChat';
 import AddPatient from './AddPatient';
+import AjoutRendezVous from './AjoutRendezVous'; // <-- NOUVEAU
 
 const ReceptionLayout = () => {
   const location = useLocation();
-  const navigate = useNavigate(); // Initialisation de navigate
+  const navigate = useNavigate();
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // ÉTAT POUR LA MODALE DE DÉCONNEXION
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   useEffect(() => {
     const checkStatus = async () => {
@@ -43,19 +42,19 @@ const ReceptionLayout = () => {
     checkStatus();
   }, []);
 
-  // Logique de déconnexion avec redirection
   const handleLogout = async () => {
     try {
       await auth.signOut();
       navigate('/login', { replace: true });
     } catch (error) {
-      console.error("Erreur déconnexion réception:", error);
+      console.error("Erreur déconnexion:", error);
     }
   };
 
   const menu = [
     { path: '/reception', icon: LayoutDashboard, label: 'Accueil' },
     { path: '/reception/nouveau-patient', icon: UserPlus, label: 'Enregistrement' },
+    { path: '/reception/rendez-vous', icon: CalendarClock, label: 'Rendez-vous' }, // AJOUTÉ
     { path: '/reception/admission', icon: UserCheck, label: 'Orientation' },
     { path: '/reception/messages', icon: MessageSquare, label: 'Messages Patients' },
     { path: '/reception/parametres', icon: Settings, label: 'Mon Compte' },
@@ -63,21 +62,43 @@ const ReceptionLayout = () => {
 
   const currentLabel = menu.find(m => m.path === location.pathname)?.label || "Tableau de bord";
 
-  if (loading) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
-        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="font-black text-blue-900 animate-pulse">Initialisation du portail...</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="h-screen flex items-center justify-center">Initialisation...</div>;
 
   return (
     <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
       
-      {/* BARRE LATÉRALE (SIDEBAR) */}
+      {/* MODALE DE CONFIRMATION DE DÉCONNEXION */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-slate-100 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <AlertCircle size={32} />
+            </div>
+            <h3 className="text-xl font-black text-slate-800 mb-2">Déconnexion ?</h3>
+            <p className="text-slate-500 text-sm font-medium mb-8">
+              Êtes-vous sûr de vouloir quitter votre session de travail ?
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                onClick={() => setShowLogoutModal(false)}
+                className="py-3 px-6 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
+              >
+                Annuler
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="py-3 px-6 bg-red-500 text-white font-bold rounded-xl shadow-lg shadow-red-200 hover:bg-red-600 transition-all"
+              >
+                Oui, Quitter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SIDEBAR */}
       {!mustChangePassword && (
-        <aside className="w-80 bg-[#004a99] text-white flex flex-col shadow-2xl relative z-10 transition-all duration-500">
+        <aside className="w-80 bg-[#004a99] text-white flex flex-col shadow-2xl relative z-10">
           <div className="p-10 border-b border-white/5">
             <h1 className="text-2xl font-black tracking-tighter italic flex items-center gap-2">
               FirstAid <span className="text-green-400 not-italic">Hôpital</span>
@@ -92,30 +113,23 @@ const ReceptionLayout = () => {
                 <Link 
                   key={item.path} 
                   to={item.path} 
-                  className={`flex items-center justify-between p-4 rounded-2xl font-bold transition-all duration-300 group ${
-                    isActive 
-                    ? 'bg-white text-[#004a99] shadow-xl translate-x-2' 
-                    : 'hover:bg-white/10 text-white/70 hover:text-white'
+                  className={`flex items-center justify-between p-4 rounded-2xl font-bold transition-all group ${
+                    isActive ? 'bg-white text-[#004a99] shadow-xl translate-x-2' : 'hover:bg-white/10 text-white/70 hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-4">
-                    <item.icon size={22} className={`${isActive ? 'text-[#004a99]' : 'text-white/40 group-hover:text-white'} transition-colors`} />
-                    <span className="tracking-tight">{item.label}</span>
+                    <item.icon size={22} className={isActive ? 'text-[#004a99]' : 'text-white/40 group-hover:text-white'} />
+                    <span>{item.label}</span>
                   </div>
-                  {isActive && <ChevronRight size={18} className="animate-in fade-in slide-in-from-left-2" />}
+                  {isActive && <ChevronRight size={18} />}
                 </Link>
               );
             })}
           </nav>
 
           <div className="p-8 space-y-4">
-            <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-              <p className="text-[10px] font-black text-blue-200/50 uppercase mb-2">Session active</p>
-              <p className="text-sm font-bold truncate">{auth.currentUser?.email}</p>
-            </div>
-            {/* Mise à jour de l'appel onClick */}
             <button 
-              onClick={handleLogout} 
+              onClick={() => setShowLogoutModal(true)} // APPEL DE LA MODALE
               className="w-full p-4 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/20 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 group"
             >
               <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" /> 
@@ -126,7 +140,7 @@ const ReceptionLayout = () => {
       )}
 
       {/* CONTENU PRINCIPAL */}
-      <main className="flex-1 overflow-y-auto bg-slate-50 relative custom-scrollbar">
+      <main className="flex-1 overflow-y-auto bg-slate-50 relative">
         {!mustChangePassword && (
           <header className="px-8 pt-8 flex items-center justify-between sticky top-0 bg-slate-50/80 backdrop-blur-md z-[5] pb-4">
             <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-3">
@@ -136,46 +150,18 @@ const ReceptionLayout = () => {
                 <span className="text-blue-600">{currentLabel}</span>
               </span>
             </div>
-
-            <div className="flex items-center gap-4">
-                <button className="p-3 bg-white rounded-xl shadow-sm border border-gray-100 text-gray-400 hover:text-blue-600 transition-colors relative">
-                    <Bell size={20} />
-                    <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                </button>
-            </div>
           </header>
         )}
 
         <div className="p-8">
-          {mustChangePassword ? (
-            <div className="max-w-xl mx-auto mt-12 bg-white p-12 rounded-[3.5rem] shadow-2xl border border-gray-50 text-center animate-in zoom-in-95 duration-500">
-              <div className="w-20 h-20 bg-red-50 text-red-500 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <Settings size={40} className="animate-spin-slow" />
-              </div>
-              <h2 className="text-3xl font-black text-gray-900 mb-4">Sécurité requise</h2>
-              <p className="text-gray-500 mb-10 font-medium leading-relaxed">
-                Pour protéger les données des patients, vous devez définir un nouveau mot de passe personnel avant d'accéder aux fonctions d'enregistrement.
-              </p>
-              <MedecinSettings />
-              {/* Optionnel : Ajout d'un bouton de sortie ici aussi pour plus de sécurité */}
-              <button 
-                onClick={handleLogout}
-                className="mt-6 text-xs font-bold text-gray-400 hover:text-red-500 uppercase tracking-widest transition-colors"
-              >
-                Quitter la session
-              </button>
-            </div>
-          ) : (
-            <div className="animate-in fade-in duration-700">
-              <Routes>
-                <Route path="/" element={<ReceptionDashboard />} />
-                <Route path="/nouveau-patient" element={<AddPatient />} />
-                <Route path="/admission" element={<PatientCheck />} />
-                <Route path="/messages" element={<MedicalChat />} />
-                <Route path="/parametres" element={<MedecinSettings />} />
-              </Routes>
-            </div>
-          )}
+          <Routes>
+            <Route path="/" element={<ReceptionDashboard />} />
+            <Route path="/nouveau-patient" element={<AddPatient />} />
+            <Route path="/rendez-vous" element={<AjoutRendezVous />} /> {/* ROUTE AJOUTÉE */}
+            <Route path="/admission" element={<PatientCheck />} />
+            <Route path="/messages" element={<MedicalChat />} />
+            <Route path="/parametres" element={<MedecinSettings />} />
+          </Routes>
         </div>
       </main>
     </div>

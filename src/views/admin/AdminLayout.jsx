@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { 
   LayoutDashboard, Stethoscope, UserCog, LogOut, 
-  Bell, FileText, ChevronRight, PlusCircle, X, Download
+  Bell, FileText, PlusCircle, X, Download
 } from 'lucide-react';
 import { auth } from '../../firebaseConfig';
 import { signOut } from 'firebase/auth';
@@ -22,7 +22,6 @@ const AdminLayout = () => {
   const handleLogout = () => signOut(auth).then(() => navigate('/login'));
 
   const generateReport = () => {
-    // Simulation de génération de PDF/Texte
     const blob = new Blob([`RAPPORT ADMINISTRATIF - FIRSTAID LOUM\nDate: ${new Date().toLocaleDateString()}\n\nContenu:\n${reportText}`], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -35,160 +34,126 @@ const AdminLayout = () => {
   };
 
   const menuItems = [
-    { path: '/admin', icon: LayoutDashboard, label: 'Tableau de bord' },
+    { path: '/admin', icon: LayoutDashboard, label: 'Accueil' },
     { path: '/admin/docteurs', icon: Stethoscope, label: 'Équipe Médicale' },
-    { path: '/admin/profil', icon: UserCog, label: 'Paramètres Profil' },
+    { path: '/admin/profil', icon: UserCog, label: 'Mon compte' },
   ];
 
   return (
-    <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
+    <div className="flex h-screen bg-slate-50 font-sans antialiased overflow-hidden">
       
-      {/* --- SIDEBAR FLOTTANTE --- */}
-      <aside className="w-72 bg-slate-900 m-4 rounded-[2.5rem] flex flex-col shadow-2xl shadow-slate-900/40 relative">
-        {/* Glow Effect Background */}
-        <div className="absolute top-20 -left-20 w-40 h-40 bg-blue-500/20 blur-[100px] rounded-full" />
+      {/* SIDEBAR - Style Bleu Foncé Identique à l'image Réception */}
+      <aside className="w-72 bg-[#00469b] flex flex-col h-full shadow-xl z-20">
         
-        {/* Logo */}
+        {/* HEADER SECTION (Style de l'image) */}
         <div className="p-8 mb-6">
-          <div className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl backdrop-blur-md border border-white/10">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-              <span className="text-white font-black text-xl">F</span>
-            </div>
-            <div className="flex flex-col">
-              <span className="text-white font-black text-lg tracking-tight leading-none">FirstAid</span>
-              <span className="text-emerald-400 text-[10px] font-black uppercase tracking-[0.2em]">District Loum</span>
-            </div>
+          <h1 className="text-white text-2xl font-black tracking-tighter leading-tight italic">
+            PREMIERS <br /> SECOURS
+          </h1>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-[#34d399] font-bold text-lg italic">Hôpital</span>
+            <span className="h-[2px] w-8 bg-[#34d399]/30"></span>
           </div>
+          <p className="text-blue-200/50 text-[10px] font-bold uppercase tracking-[0.2em] mt-4">
+            Espace Administrateur
+          </p>
         </div>
 
         {/* Navigation */}
         <nav className="flex-1 px-4 space-y-2">
           {menuItems.map((item) => {
-            const active = location.pathname === item.path;
+            const isActive = location.pathname === item.path;
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                className={`group flex items-center justify-between px-5 py-4 rounded-2xl transition-all duration-300 ${
-                  active 
-                  ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-xl shadow-emerald-500/30' 
-                  : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                className={`flex items-center gap-4 px-6 py-4 rounded-xl font-bold text-sm transition-all relative overflow-hidden group ${
+                  isActive 
+                  ? 'bg-white text-[#00469b] shadow-lg translate-x-2' 
+                  : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                <div className="flex items-center gap-4">
-                  <item.icon size={22} strokeWidth={active ? 2.5 : 2} />
-                  <span className={`font-bold ${active ? 'text-white' : ''}`}>{item.label}</span>
-                </div>
-                {active && <ChevronRight size={18} className="animate-pulse" />}
+                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="flex-1">{item.label}</span>
+                {isActive && (
+                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-[#34d399]" />
+                )}
               </Link>
             );
           })}
 
-          <div className="pt-8 pb-4">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] px-5 mb-4">Outils Rapides</p>
+          <div className="pt-6">
+            <p className="text-blue-200/30 text-[10px] font-black uppercase tracking-[0.3em] px-6 mb-4">Rapports</p>
             <button 
               onClick={() => setShowReportModal(true)}
-              className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl text-slate-400 hover:bg-white/5 hover:text-emerald-400 transition-all border border-dashed border-slate-700 hover:border-emerald-500/50"
+              className="w-full flex items-center gap-4 px-6 py-4 rounded-xl text-white/70 hover:bg-white/10 hover:text-white transition-all border border-dashed border-white/20"
             >
-              <FileText size={22} />
-              <span className="font-bold">Créer un Rapport</span>
-              <PlusCircle size={16} className="ml-auto opacity-50" />
+              <FileText size={20} />
+              <span className="font-bold text-sm text-left">Nouveau Rapport</span>
+              <PlusCircle size={14} className="ml-auto opacity-50" />
             </button>
           </div>
         </nav>
 
-        {/* Footer Sidebar */}
+        {/* LOGOUT BUTTON (Encadré en rouge comme sur l'image) */}
         <div className="p-6">
           <button 
             onClick={() => setShowLogoutConfirm(true)}
-            className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-rose-500/10 text-rose-500 font-black text-xs uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all shadow-lg shadow-rose-500/5"
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded-2xl border-2 border-rose-500/30 bg-rose-500/10 text-rose-100 font-bold text-sm hover:bg-rose-500 hover:text-white transition-all duration-300"
           >
-            <LogOut size={18} /> Quitter la Session
+            <LogOut size={20} />
+            <span>Déconnexion</span>
           </button>
         </div>
       </aside>
 
-      {/* --- CONTENU PRINCIPAL --- */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
-        
-        {/* Header Moderne */}
-        <header className="h-24 flex justify-between items-center px-12">
-          <div>
-            <h2 className="text-3xl font-black text-slate-800 tracking-tighter">
-              {menuItems.find(i => i.path === location.pathname)?.label || 'Administration'}
+      {/* ZONE DE CONTENU */}
+      <main className="flex-1 overflow-y-auto relative">
+        <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-10 flex items-center px-8 justify-between">
+            <h2 className="text-slate-400 font-semibold text-xs uppercase tracking-widest">
+                Contrôle Administratif : {auth.currentUser?.email}
             </h2>
-            <div className="flex items-center gap-2">
-               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Système Opérationnel</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-8">
-            <button className="relative p-3 bg-white text-slate-400 rounded-2xl shadow-sm border border-slate-100 hover:text-emerald-500 transition-all">
-              <Bell size={22} />
-              <span className="absolute top-3 right-3 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white"></span>
+            <button className="relative p-2 text-slate-400 hover:text-[#00469b] transition-all">
+              <Bell size={20} />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
             </button>
-            
-            <div className="flex items-center gap-4 pl-8 border-l-2 border-slate-100">
-              <div className="text-right">
-                <p className="text-sm font-black text-slate-800 leading-none mb-1">Dr. Admin Loum</p>
-                <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Superviseur</p>
-              </div>
-              <div className="relative group cursor-pointer" onClick={() => navigate('/admin/profil')}>
-                 <img 
-                  src="https://ui-avatars.com/api/?name=Admin+Loum&background=10b981&color=fff&bold=true" 
-                  alt="Avatar" 
-                  className="w-14 h-14 rounded-2xl border-4 border-white shadow-xl group-hover:scale-105 transition-transform"
-                />
-              </div>
-            </div>
-          </div>
         </header>
 
-        <main className="flex-1 px-12 pb-8 overflow-y-auto custom-scrollbar">
+        <div className="p-8">
           <Routes>
             <Route path="/" element={<AdminDashboard />} />
             <Route path="/docteurs" element={<DoctorManager />} />
             <Route path="/profil" element={<AdminProfile />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
           </Routes>
-        </main>
-      </div>
+        </div>
+      </main>
 
-      {/* --- MODAL DE RÉDACTION DE RAPPORT --- */}
+      {/* MODAL RAPPORT (Modernisé) */}
       {showReportModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-in fade-in duration-300">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl overflow-hidden border border-white animate-in zoom-in-95 duration-300">
-            <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+          <div className="bg-white w-full max-w-xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-white animate-in zoom-in-95">
+            <div className="bg-[#00469b] p-8 text-white flex justify-between items-center">
               <div className="flex items-center gap-4">
-                <div className="bg-emerald-500 p-3 rounded-2xl"><FileText size={24}/></div>
-                <div>
-                  <h3 className="text-xl font-black tracking-tight">Générer un Rapport Administratif</h3>
-                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Compte-rendu d'activité hebdomadaire</p>
-                </div>
+                <FileText size={24}/>
+                <h3 className="text-xl font-bold italic tracking-tight">Rapport d'Activité</h3>
               </div>
               <button onClick={() => setShowReportModal(false)} className="p-2 hover:bg-white/10 rounded-full transition"><X /></button>
             </div>
-            <div className="p-8 space-y-6">
+            <div className="p-8">
               <textarea 
-                rows="8"
+                rows="6"
                 value={reportText}
                 onChange={(e) => setReportText(e.target.value)}
-                placeholder="Décrivez les événements marquants, les statistiques ou les besoins matériels de l'hôpital..."
-                className="w-full p-6 bg-slate-50 border-none rounded-[2rem] focus:ring-4 focus:ring-emerald-500/10 font-medium text-slate-700 placeholder:text-slate-300 resize-none transition-all"
+                placeholder="Détails du rapport administratif..."
+                className="w-full p-6 bg-slate-50 border border-slate-200 rounded-3xl focus:ring-2 focus:ring-[#00469b] outline-none transition-all"
               />
-              <div className="flex gap-4">
-                <button 
-                  onClick={() => setShowReportModal(false)}
-                  className="flex-1 py-5 rounded-2xl bg-slate-100 font-black text-slate-500 uppercase tracking-widest text-xs hover:bg-slate-200 transition-all"
-                >
-                  Abandonner
-                </button>
+              <div className="flex gap-4 mt-6">
                 <button 
                   onClick={generateReport}
-                  disabled={!reportText}
-                  className="flex-1 py-5 rounded-2xl bg-emerald-500 font-black text-white uppercase tracking-widest text-xs hover:bg-emerald-600 transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 py-4 rounded-2xl bg-[#00469b] font-bold text-white hover:bg-blue-800 transition-all shadow-lg flex items-center justify-center gap-3"
                 >
-                  <Download size={18} /> Télécharger le Rapport (.txt)
+                  <Download size={18} /> Télécharger (.txt)
                 </button>
               </div>
             </div>
@@ -196,18 +161,20 @@ const AdminLayout = () => {
         </div>
       )}
 
-      {/* --- MODAL DÉCONNEXION --- */}
+      {/* MODAL DÉCONNEXION */}
       {showLogoutConfirm && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[110] animate-in fade-in">
-           <div className="bg-white p-10 rounded-[3rem] shadow-2xl max-w-sm w-full text-center border border-white">
-              <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                <LogOut size={32} />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[200] p-4">
+           <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl max-w-sm w-full text-center animate-in zoom-in-95 duration-200">
+              <div className="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <LogOut size={32} className="text-rose-500" />
               </div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight">Session Securisée</h3>
-              <p className="text-slate-500 font-medium mt-2 mb-8">Voulez-vous vraiment fermer l'accès administratif ?</p>
+              <h3 className="text-2xl font-black text-slate-800 mb-2">Fermer la session ?</h3>
+              <p className="text-sm text-slate-500 mb-8 font-medium leading-relaxed">
+                Vous allez quitter l'interface d'administration sécurisée de l'Hôpital de Loum.
+              </p>
               <div className="flex flex-col gap-3">
-                <button onClick={handleLogout} className="w-full py-4 rounded-2xl bg-rose-500 font-black text-white uppercase tracking-widest text-xs hover:bg-rose-600 transition-all shadow-lg shadow-rose-500/20">Confirmer la sortie</button>
-                <button onClick={() => setShowLogoutConfirm(false)} className="w-full py-4 rounded-2xl bg-slate-100 font-black text-slate-500 uppercase tracking-widest text-xs hover:bg-slate-200 transition-all">Rester connecté</button>
+                <button onClick={handleLogout} className="w-full py-4 rounded-2xl bg-[#00469b] font-bold text-white hover:bg-blue-800 transition-all shadow-lg">Confirmer</button>
+                <button onClick={() => setShowLogoutConfirm(false)} className="w-full py-4 rounded-2xl bg-slate-100 font-bold text-slate-600">Annuler</button>
               </div>
            </div>
         </div>

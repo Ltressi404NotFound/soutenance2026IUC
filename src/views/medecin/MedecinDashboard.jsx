@@ -1,143 +1,139 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, Activity, Clock, AlertTriangle, 
-  MessageSquare, UserCheck, Calendar, ArrowUpRight 
+  Calendar, Bell, ChevronRight, CheckCircle2, 
+  ArrowUpRight, FileText, DollarSign, ClipboardCheck
 } from 'lucide-react';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, 
+  Tooltip, ResponsiveContainer, Cell 
 } from 'recharts';
-import { db } from '../../firebaseConfig';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { Link } from 'react-router-dom';
+import { db, auth } from '../../firebaseConfig';
+import { collection, onSnapshot, query, where, orderBy, limit } from 'firebase/firestore';
 
 const MedecinDashboard = () => {
   const [patientCount, setPatientCount] = useState(0);
-  const [waitingCount, setWaitingCount] = useState(0);
+  const [appointments, setAppointments] = useState([]);
+  const [todayApps, setTodayApps] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  // Données du graphique (peuvent aussi être rendues dynamiques plus tard)
-  const data = [
-    { name: 'Lun', crises: 4 }, { name: 'Mar', crises: 3 },
-    { name: 'Mer', crises: 2 }, { name: 'Jeu', crises: 6 },
-    { name: 'Ven', crises: 8 }, { name: 'Sam', crises: 1 }, { name: 'Dim', crises: 0 },
+  // Données factices pour le graphique en barres (style image)
+  const barData = [
+    { name: 'Jan', val: 65, color: '#3b82f6' },
+    { name: 'Feb', val: 75, color: '#10b981' },
+    { name: 'Mar', val: 62, color: '#f43f5e' },
+    { name: 'Apr', val: 85, color: '#eab308' },
+    { name: 'May', val: 70, color: '#3b82f6' },
+    { name: 'Jun', val: 78, color: '#10b981' },
   ];
 
   useEffect(() => {
-    // Récupérer le nombre de patients assignés à ce médecin (Exemple statique ou filtré par ID)
-    const unsub = onSnapshot(collection(db, "utilisateurs"), (snap) => {
-      const allUsers = snap.docs.map(d => d.data());
-      setPatientCount(allUsers.filter(u => u.rôle === "patient" || u.role === "patient").length);
-      setWaitingCount(allUsers.filter(u => u.statut === "En attente").length);
+    // 1. Compte total des patients
+    const unsubUsers = onSnapshot(collection(db, "utilisateurs"), (snap) => {
+      const docs = snap.docs.map(d => d.data());
+      setPatientCount(docs.filter(u => u.role === "patient" || u.rôle === "patient").length);
     });
-    return () => unsub();
+
+    // 2. RÉCUPÉRATION DES RENDEZ-VOUS (Créés par la réception)
+    const today = new Date().toISOString().split('T')[0]; // Format YYYY-MM-DD
+    const qApps = query(
+      collection(db, "rendezvous"),
+      where("date", "==", today),
+      orderBy("heure", "asc")
+    );
+
+    const unsubApps = onSnapshot(qApps, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setAppointments(list);
+      setTodayApps(list.length);
+      setLoading(false);
+    });
+
+    return () => { unsubUsers(); unsubApps(); };
   }, []);
 
-  const shortcuts = [
-    { label: "Ma File d'Attente", path: "/medecin/patients", icon: Clock, color: "bg-blue-600" },
-    { label: "Messagerie", path: "/medecin/messages", icon: MessageSquare, color: "bg-indigo-600" },
-    { label: "Planning", path: "/medecin/parametres", icon: Calendar, color: "bg-slate-800" },
-  ];
+  // Composant pour les petites cartes du haut (Style Image)
+  const StatCard = ({ title, count, icon: Icon, colorClass }) => (
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex justify-between items-center hover:shadow-md transition-shadow">
+      <div>
+        <p className="text-slate-500 text-sm font-medium mb-1">{title}</p>
+        <p className="text-2xl font-bold text-slate-800">{count}</p>
+      </div>
+      <div className={`p-3 rounded-lg ${colorClass} text-white shadow-lg`}>
+        <Icon size={24} />
+      </div>
+    </div>
+  );
+
+  if (loading) return <div className="p-10 text-center font-bold text-slate-400">Chargement du Dashboard...</div>;
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-700">
-      {/* HEADER AVEC SALUTATIONS DYNAMIQUES */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black text-gray-800 tracking-tight">Tableau de Bord Médical</h1>
-          <p className="text-gray-500 font-medium">Gestion de vos consultations et suivi neurologique.</p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-black text-blue-600 uppercase tracking-widest">Dr. Loum</p>
-          <p className="text-xs text-gray-400">Neurologue Principal</p>
-        </div>
+    <div className="min-h-screen bg-[#f4f7f6] p-4 lg:p-8">
+      
+      <h1 className="text-2xl font-bold text-slate-800 mb-6">Dashboard</h1>
+
+      {/* 4 CARRES DE STATISTIQUES (Inspiré de l'image) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard title="Total Patients" count={patientCount} icon={Users} colorClass="bg-blue-500" />
+        <StatCard title="Rdv Aujourd'hui" count={todayApps} icon={Calendar} colorClass="bg-green-500" />
+        <StatCard title="Prescriptions" count="12" icon={ClipboardCheck} colorClass="bg-emerald-500" />
+        <StatCard title="Consultations" count="08" icon={Activity} colorClass="bg-amber-500" />
       </div>
 
-      {/* RACCOURCIS RAPIDES */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {shortcuts.map((s, i) => (
-          <Link key={i} to={s.path} className="group bg-white p-4 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className={`${s.color} p-3 rounded-2xl text-white shadow-lg`}>
-                <s.icon size={20} />
-              </div>
-              <span className="font-bold text-gray-700">{s.label}</span>
-            </div>
-            <ArrowUpRight size={18} className="text-gray-300 group-hover:text-blue-600 transition-colors" />
-          </Link>
-        ))}
-      </div>
-
-      {/* CARTES STATS DYNAMIQUES */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[
-          { label: "Total Patients", value: patientCount, icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "En attente", value: waitingCount, icon: Clock, color: "text-indigo-600", bg: "bg-indigo-50" },
-          { label: "Crises /7j", value: "12", icon: Activity, color: "text-cyan-600", bg: "bg-cyan-50" },
-          { label: "Urgences", value: "02", icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-50 flex items-center gap-5 relative overflow-hidden group">
-            <div className={`${stat.bg} ${stat.color} p-4 rounded-2xl transition-transform group-hover:scale-110`}>
-              <stat.icon size={24} />
-            </div>
-            <div className="z-10">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{stat.label}</p>
-              <p className="text-2xl font-black text-gray-800">{stat.value}</p>
-            </div>
-            <div className={`absolute -right-4 -bottom-4 opacity-[0.03] ${stat.color} group-hover:opacity-[0.08] transition-opacity`}>
-               <stat.icon size={100} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* GRAPHIQUE AMÉLIORÉ (BLEU MÉDICAL) */}
-      <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-gray-50">
-        <div className="flex justify-between items-center mb-8">
-          <h3 className="text-xl font-black text-gray-800 flex items-center gap-2">
-            <Activity className="text-blue-500" /> Analyse des Crises
-          </h3>
-          <select className="bg-gray-50 border-none rounded-xl text-xs font-bold p-2 outline-none">
-            <option>7 derniers jours</option>
-            <option>30 derniers jours</option>
-          </select>
-        </div>
+      <div className="grid grid-cols-12 gap-8">
         
-        <div className="h-[350px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id="colorBlue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#2563eb" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis 
-                dataKey="name" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fill: '#64748b', fontSize: 12, fontWeight: 600}} 
-                dy={10}
-              />
-              <YAxis 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{fill: '#64748b', fontSize: 12}} 
-              />
-              <Tooltip 
-                contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-              />
-              <Area 
-                type="monotone" 
-                dataKey="crises" 
-                stroke="#2563eb" 
-                strokeWidth={4}
-                fillOpacity={1} 
-                fill="url(#colorBlue)" 
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        {/* GRAPHIQUE EN BARRES (Style Image) */}
+        <div className="col-span-12 lg:col-span-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <h3 className="text-lg font-bold text-slate-700 mb-6 text-center">Statistiques Mensuelles Patients</h3>
+          <div className="h-[350px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
+                <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '10px', border: 'none', shadow: '0 10px 15px -3px rgba(0,0,0,0.1)'}} />
+                <Bar dataKey="val" radius={[5, 5, 0, 0]} barSize={40}>
+                  {barData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
+
+        {/* LISTE DES RENDEZ-VOUS DU JOUR (Récupérés de la réception) */}
+        <div className="col-span-12 lg:col-span-4 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="font-bold text-slate-800">Agenda du Jour</h3>
+            <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded-md font-black uppercase">Live</span>
+          </div>
+
+          <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+            {appointments.length > 0 ? appointments.map((app) => (
+              <div key={app.id} className="flex items-center gap-4 p-3 rounded-xl border border-slate-50 hover:bg-slate-50 transition-colors group">
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex flex-col items-center justify-center text-slate-500 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  <Clock size={16} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-slate-800">{app.patientName}</p>
+                  <p className="text-[11px] text-slate-400 font-medium">{app.heure} - {app.motif || 'Checkup'}</p>
+                </div>
+                <ChevronRight size={16} className="text-slate-300" />
+              </div>
+            )) : (
+              <div className="text-center py-10">
+                <Calendar size={40} className="mx-auto text-slate-200 mb-2" />
+                <p className="text-xs text-slate-400 font-medium italic">Aucun patient programmé par la réception aujourd'hui.</p>
+              </div>
+            )}
+          </div>
+
+          <button className="w-full mt-6 py-3 bg-slate-800 text-white text-xs font-bold rounded-xl hover:bg-slate-900 transition-all uppercase tracking-widest">
+            Voir tout l'agenda
+          </button>
+        </div>
+
       </div>
     </div>
   );
